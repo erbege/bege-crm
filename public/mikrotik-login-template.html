@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Mikrotik Hotspot Redirect</title>
+    <meta http-equiv="refresh"
+        content="0; url=http://YOUR_LARAVEL_APP_URL/hotspot/portal?mac=$(mac)&ip=$(ip)&username=$(username)&link-login=$(link-login-only)&link-orig=$(link-orig)&error=$(error)">
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+
+<body>
+    <p>Sedang mengalihkan ke portal login...</p>
+    <p>Jika tidak dialihkan secara otomatis, <a
+            href="http://YOUR_LARAVEL_APP_URL/hotspot/portal?mac=$(mac)&ip=$(ip)&username=$(username)&link-login=$(link-login-only)&link-orig=$(link-orig)&error=$(error)">klik
+            di sini</a>.</p>
+</body>
+<!-- 
+Instruksi Penggunaan:
+1. Ganti tulisan `YOUR_LARAVEL_APP_URL` dengan domain web SKNET-CRM Anda, misal: `crm.sknet.id`.
+2. Hapus atau ubah file `login.html` bawaan mikrotik dengan file ini.
+3. Pastikan `crm.sknet.id` dan host Payment Gateway masuk ke dalam Walled Garden Mikrotik.
+-->
+
+</html>

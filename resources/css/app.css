@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+[x-cloak] {
+    display: none;
+}
+
+/* Premium Scrollbar */
+@media (min-width: 768px) {
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        @apply bg-transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        @apply bg-gray-200 dark:bg-gray-700 rounded-full border-2 border-transparent bg-clip-content hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors;
+    }
+}
+
+/* Smooth Navigation & Global Transitions */
+
+
+/* Premium Focus States */
+input:focus, textarea:focus, select:focus, button:focus-visible {
+    @apply outline-none ring-2 ring-indigo-500/20 border-indigo-500/50 transition-all duration-300 !important;
+}
+
+/* Glassmorphism Utilities */
+.glass {
+    @apply bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-white/20 dark:border-gray-700/30 shadow-xl;
+}
+
+/* Page Transitions */
+.page-enter {
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Auto-hide scrollbar — visible only on hover/scroll */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.3s;
+}
+.custom-scrollbar:hover {
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 9999px;
+    transition: background-color 0.3s;
+}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.5);
+}
+
+@media (prefers-color-scheme: dark) {
+    .custom-scrollbar:hover {
+        scrollbar-color: rgba(107, 114, 128, 0.5) transparent;
+    }
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+        background-color: rgba(107, 114, 128, 0.5);
+    }
+}
