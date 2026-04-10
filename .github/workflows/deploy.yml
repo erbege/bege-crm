@@ -21,3 +21,13 @@ jobs:
           if [ ! -d repo ]; then
             git clone https://github.com/erbege/bege-crm.git repo
           fi
+          cd repo
+          git fetch origin main
+          git reset --hard origin/main
+
+          # contoh rolling update semua client
+          for c in /opt/bege-crm/clients/*; do
+            cd $c
+            docker compose pull
+            docker compose up -d
+          done
