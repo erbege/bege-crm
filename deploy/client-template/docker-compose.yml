@@ -49,3 +49,20 @@ services:
       - crm_net
 
   radius:
+    image: freeradius/freeradius-server:latest
+    container_name: radius-${CLIENT_CODE}
+    restart: unless-stopped
+    depends_on:
+      - radiusdb
+    volumes:
+      - ./freeradius:/etc/freeradius
+    networks:
+      - crm_net
+
+networks:
+  crm_net:
+
+volumes:
+  db_data:
+  redis_data:
+  radius_db_data:
