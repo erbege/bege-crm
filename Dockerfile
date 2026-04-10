@@ -1,36 +1,46 @@
-# ---------- Stage 1: PHP dependencies ----------
+# syntax=docker/dockerfile:1
+
+############################
+# 1) PHP vendor builder
+############################
 FROM composer:2 AS vendor
 WORKDIR /app
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --prefer-dist --no-interaction --no-scripts --optimize-autoloader
+COPY . .
+RUN composer dump-autoload --optimize --no-dev
 
-# ---------- Stage 2: Node assets ----------
+############################
+# 2) Vite assets builder
+############################
 FROM node:20-alpine AS assets
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
+COPY package.json package-lock.json* ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 RUN npm run build
 
-# ---------- Stage 3: Runtime ----------
-FROM php:8.3-apache
+############################
+# 3) Runtime (nginx + php-fpm)
+############################
+FROM php:8.3-fpm-alpine
 
-RUN apt-get update && apt-get install -y \
-    libzip-dev libpng-dev libonig-dev libxml2-dev unzip git curl \
-    && docker-php-ext-install pdo pdo_mysql mbstring zip exif pcntl \
-    && a2enmod rewrite \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache nginx supervisor bash curl git unzip icu-dev oniguruma-dev libzip-dev tzdata \
+    && docker-php-ext-install pdo pdo_mysql mbstring intl zip opcache
 
 WORKDIR /var/www/html
-COPY . /var/www/html
-COPY --from=vendor /app/vendor /var/www/html/vendor
-COPY --from=assets /app/public/build /var/www/html/public/build
+COPY . .
+COPY --from=vendor /app/vendor ./vendor
+COPY --from=assets /app/public/build ./public/build
 
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
-    /etc/apache2/sites-available/000-default.conf /etc/apache2/apache2.conf \
-    && chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 storage bootstrap/cache
+
+COPY .docker/nginx.conf /etc/nginx/nginx.conf
+COPY .docker/default.conf /etc/nginx/http.d/default.conf
+COPY .docker/supervisord.conf /etc/supervisord.conf
+COPY .docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 80
-CMD ["apache2-foreground"]
+ENTRYPOINT ["/entrypoint.sh"]
