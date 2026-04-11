@@ -4,11 +4,8 @@ services:
     container_name: crm-${CLIENT_CODE}
     restart: unless-stopped
     env_file: .env
-    depends_on:
-      - db
-      - redis
-    networks:
-      - crm_net
+    depends_on: [db, redis]
+    networks: [crm_net]
 
   db:
     image: mariadb:11
@@ -19,50 +16,16 @@ services:
       MYSQL_DATABASE: ${DB_DATABASE}
       MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - db_data:/var/lib/mysql
-    networks:
-      - crm_net
+    volumes: [db_data:/var/lib/mysql]
+    networks: [crm_net]
 
   redis:
     image: redis:7-alpine
     container_name: redis-${CLIENT_CODE}
     restart: unless-stopped
     command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-    networks:
-      - crm_net
+    volumes: [redis_data:/data]
+    networks: [crm_net]
 
   radiusdb:
     image: mariadb:11
-    container_name: radiusdb-${CLIENT_CODE}
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${RADIUS_DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${RADIUS_DB_DATABASE}
-      MYSQL_USER: ${RADIUS_DB_USERNAME}
-      MYSQL_PASSWORD: ${RADIUS_DB_PASSWORD}
-    volumes:
-      - radius_db_data:/var/lib/mysql
-    networks:
-      - crm_net
-
-  radius:
-    image: freeradius/freeradius-server:latest
-    container_name: radius-${CLIENT_CODE}
-    restart: unless-stopped
-    depends_on:
-      - radiusdb
-    volumes:
-      - ./freeradius:/etc/freeradius
-    networks:
-      - crm_net
-
-networks:
-  crm_net:
-
-volumes:
-  db_data:
-  redis_data:
-  radius_db_data:
