@@ -29,3 +29,29 @@ services:
 
   radiusdb:
     image: mariadb:11
+    container_name: radiusdb-${CLIENT_CODE}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${RADIUS_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${RADIUS_DB_DATABASE}
+      MYSQL_USER: ${RADIUS_DB_USERNAME}
+      MYSQL_PASSWORD: ${RADIUS_DB_PASSWORD}
+volumes: [radius_db_data:/var/lib/mysql]
+    networks: [crm_net]
+
+  radius:
+    image: freeradius/freeradius-server:latest
+    container_name: radius-${CLIENT_CODE}
+    restart: unless-stopped
+    depends_on: [radiusdb]
+    volumes:
+      - ./freeradius:/etc/freeradius
+    networks: [crm_net]
+
+networks:
+  crm_net:
+
+volumes:
+  db_data:
+  redis_data:
+  radius_db_data:
