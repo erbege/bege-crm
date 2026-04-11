@@ -1,4 +1,5 @@
 name: Deploy to VPS
+
 on:
   workflow_run:
     workflows: ["Build and Push CRM Image"]
@@ -8,6 +9,7 @@ jobs:
   deploy:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
+
     steps:
       - name: SSH Deploy
         uses: appleboy/ssh-action@v1.0.3
@@ -17,6 +19,9 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -e
+
+            echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+
             BASE=/opt/bege-crm/clients
             for c in $BASE/*; do
               [ -d "$c" ] || continue
@@ -24,3 +29,5 @@ jobs:
               docker compose pull
               docker compose up -d --remove-orphans
             done
+
+            docker image prune -f
