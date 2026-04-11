@@ -1,5 +1,4 @@
-name: Deploy CRM to Docker Host
-
+name: Deploy to VPS
 on:
   workflow_run:
     workflows: ["Build and Push CRM Image"]
@@ -11,23 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: SSH Deploy
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.DEPLOY_HOST }}
-        username: ${{ secrets.DEPLOY_USER }}
-        key: ${{ secrets.DEPLOY_SSH_KEY }}
-        script: |
-          cd /opt/bege-crm
-          if [ ! -d repo ]; then
-            git clone https://github.com/erbege/bege-crm.git repo
-          fi
-          cd repo
-          git fetch origin main
-          git reset --hard origin/main
-
-          # contoh rolling update semua client
-          for c in /opt/bege-crm/clients/*; do
-            cd $c
-            docker compose pull
-            docker compose up -d
-          done
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            BASE=/opt/bege-crm/clients
+            for c in $BASE/*; do
+              [ -d "$c" ] || continue
+              cd "$c"
+              docker compose pull
+              docker compose up -d --remove-orphans
+            done
