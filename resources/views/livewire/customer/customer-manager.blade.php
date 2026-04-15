@@ -158,13 +158,7 @@
                             <h3
                                 class="text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-3">
                                 {{ $editMode ? 'Edit Pelanggan' : 'Tambah Pelanggan Baru' }}
-                                <span
-                                    class="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-indigo-100 dark:border-indigo-800/50">
-                                    {{ $customer_id }}
-                                </span>
                             </h3>
-                            <div class="h-1 w-20 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full">
-                            </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <!-- Left Column: Personal Information -->
@@ -181,6 +175,14 @@
                                     </h4>
 
                                     <div class="space-y-4">
+                                        <div>
+                                            <label
+                                                class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Nomor
+                                                Pelanggan</label>
+                                            <input wire:model="customer_id" type="text" readonly
+                                                class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-gray-100 dark:border-gray-700 rounded-xl text-sm text-gray-500 cursor-not-allowed transition-all duration-300">
+                                        </div>
+
                                         <div>
                                             <label
                                                 class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Nama
