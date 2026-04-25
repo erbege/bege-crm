@@ -10,3 +10,7 @@
 /bootstrap/cache/*
 .env
 .phpunit.result.cache
+QWEN.md
+test_duitku_perms.php
+test_redis.php
+verify_subscription_creation.php

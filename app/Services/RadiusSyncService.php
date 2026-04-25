@@ -525,6 +525,11 @@ class RadiusSyncService
 
         if (!$this->ensureRadiusAvailable('bulk sync vouchers')) {
             return;
+        }
+
+        try {
+            DB::connection('radius')->beginTransaction();
+
             $usernames = array_column($vouchersData, 'code');
 
             // 1. Bulk Delete in chunks to avoid SQL placeholder limits
