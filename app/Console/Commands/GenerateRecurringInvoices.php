@@ -89,8 +89,8 @@ class GenerateRecurringInvoices extends Command
 
             if (!$dryRun) {
                 // Get Settings
-                $taxPercentage = \App\Models\Setting::get('billing.tax_percentage', 0);
-                $gracePeriodDays = \App\Models\Setting::get('billing.grace_period_days', 7);
+                $taxPercentage = (float) \App\Models\Setting::get('billing.tax_percentage', 0);
+                $gracePeriodDays = (int) \App\Models\Setting::get('billing.grace_period_days', 7);
 
                 // Calculate Amounts
                 $amount = $subscription->package->price ?? 0;
@@ -103,39 +103,47 @@ class GenerateRecurringInvoices extends Command
                 $issueDate = $newPeriodStart->copy();
                 $dueDate = $issueDate->copy()->addDays($gracePeriodDays);
 
-                // Create new subscription
-                $newSubscription = Subscription::create([
-                    'customer_id' => $subscription->customer_id,
-                    'package_id' => $subscription->package_id,
-                    'coverage_point_id' => $subscription->coverage_point_id,
-                    'period_start' => $newPeriodStart,
-                    'period_end' => $newPeriodEnd,
-                    'installation_date' => $subscription->installation_date,
-                    'status' => 'pending',
-                    'pppoe_username' => $subscription->pppoe_username,
-                    'pppoe_password' => $subscription->pppoe_password,
-                    'device_sn' => $subscription->device_sn,
-                ]);
+                try {
+                    \Illuminate\Support\Facades\DB::transaction(function () use ($subscription, $newPeriodStart, $newPeriodEnd, $issueDate, $dueDate, $amount, $tax, $total) {
+                        // Create new subscription
+                        $newSubscription = Subscription::create([
+                            'customer_id' => $subscription->customer_id,
+                            'package_id' => $subscription->package_id,
+                            'coverage_point_id' => $subscription->coverage_point_id,
+                            'period_start' => $newPeriodStart,
+                            'period_end' => $newPeriodEnd,
+                            'installation_date' => $subscription->installation_date,
+                            'status' => 'pending',
+                            'pppoe_username' => $subscription->pppoe_username,
+                            'pppoe_password' => $subscription->pppoe_password,
+                            'device_sn' => $subscription->device_sn,
+                        ]);
 
-                $invoice = Invoice::create([
-                    'invoice_number' => Invoice::generateInvoiceNumber(),
-                    'subscription_id' => $newSubscription->id,
-                    'customer_id' => $newSubscription->customer_id,
-                    'issue_date' => $issueDate,
-                    'due_date' => $dueDate,
-                    'subtotal' => $amount,
-                    'tax' => $tax, // Include Tax
-                    'installation_fee' => 0,
-                    'discount' => 0,
-                    'total' => $total, // Total includes tax
-                    'status' => 'unpaid',
-                ]);
+                        $invoice = Invoice::create([
+                            'invoice_number' => Invoice::generateInvoiceNumber(),
+                            'subscription_id' => $newSubscription->id,
+                            'customer_id' => $newSubscription->customer_id,
+                            'issue_date' => $issueDate,
+                            'due_date' => $dueDate,
+                            'subtotal' => $amount,
+                            'tax' => $tax,
+                            'installation_fee' => 0,
+                            'discount' => 0,
+                            'total' => $total,
+                            'status' => 'unpaid',
+                        ]);
 
-                $this->info("    ✓ Created subscription and invoice {$invoice->invoice_number}");
+                        // Auto-send WhatsApp notification if enabled
+                        if (\App\Models\Setting::get('billing.auto_send_invoice', false)) {
+                            $this->sendWhatsAppNotification($invoice);
+                        }
 
-                // Auto-send WhatsApp notification if enabled
-                if (\App\Models\Setting::get('billing.auto_send_invoice', false)) {
-                    $this->sendWhatsAppNotification($invoice);
+                        $this->info("    ✓ Created subscription and invoice {$invoice->invoice_number}");
+                    });
+                } catch (\Exception $e) {
+                    $this->error("    ✗ Failed to process {$subscription->customer->name}: " . $e->getMessage());
+                    \Illuminate\Support\Facades\Log::error("Recurring Invoice Generation Failed for Customer {$subscription->customer_id}: " . $e->getMessage());
+                    continue;
                 }
             }
 
@@ -191,5 +199,4 @@ class GenerateRecurringInvoices extends Command
         $invoice->update(['sent_at' => now()]);
         $this->line("    → WhatsApp notification queued for {$customer->name}");
     }
-}
 }
