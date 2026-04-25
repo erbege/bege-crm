@@ -188,6 +188,17 @@ class CustomerManager extends Component
             ->latest()
             ->paginate($this->perPage);
 
+        if ($this->selectedCustomer) {
+            $this->selectedCustomer->loadMissing([
+                'histories.previousPackage',
+                'histories.currentPackage',
+                'area',
+                'subscriptions.package',
+                'activeSubscription.olt',
+                'subscriptions.olt'
+            ]);
+        }
+
         $mapDefaults = Cache::get('settings:map_defaults', [
             'lat' => -6.200000,
             'lng' => 106.816666,

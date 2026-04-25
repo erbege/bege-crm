@@ -5,6 +5,8 @@ namespace App\Services;
 use Exception;
 use RouterOS\Client;
 use RouterOS\Query;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class MikrotikService
 {
@@ -21,7 +23,7 @@ class MikrotikService
                 'user' => $user,
                 'pass' => $pass,
                 'port' => (int) $port,
-                'timeout' => 3,
+                'timeout' => 10, // Increased from 3 to 10 for public IPs
             ]);
             return true;
         } catch (Exception $e) {
@@ -176,15 +178,11 @@ class MikrotikService
      */
     public function checkConnection(\App\Models\Nas $nas): bool
     {
-        try {
-            $this->connect($nas->ip_address, $nas->username, $nas->password, $nas->api_port);
-            // Just trying to connect is enough, but let's run a lightweight command
-            $query = new Query('/system/identity/print');
-            $this->client->query($query)->read();
-            return true;
-        } catch (Exception $e) {
-            return false;
-        }
+        $this->connect($nas->ip_address, $nas->username, $nas->password, $nas->api_port);
+        // Just trying to connect is enough, but let's run a lightweight command
+        $query = new Query('/system/identity/print');
+        $this->client->query($query)->read();
+        return true;
     }
 
     /**
@@ -195,45 +193,49 @@ class MikrotikService
      */
     public function getSystemInfo(\App\Models\Nas $nas): ?array
     {
-        try {
-            $this->connect($nas->ip_address, $nas->username, $nas->password, $nas->api_port);
+        $cacheKey = "nas_info_{$nas->id}";
 
-            $identity = $this->client->query(new Query('/system/identity/print'))->read();
-            $resource = $this->client->query(new Query('/system/resource/print'))->read();
-            $routerboard = $this->client->query(new Query('/system/routerboard/print'))->read();
-
-            // Try standard disk check
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($nas) {
             try {
-                $disk = $this->client->query(new Query('/store/disk/print'))->read();
-            } catch (Exception $e) {
-                $disk = [];
-            }
+                $this->connect($nas->ip_address, $nas->username, $nas->password, $nas->api_port);
 
-            if (empty($disk)) {
+                $identity = $this->client->query(new Query('/system/identity/print'))->read();
+                $resource = $this->client->query(new Query('/system/resource/print'))->read();
+                $routerboard = $this->client->query(new Query('/system/routerboard/print'))->read();
+
+                // Try standard disk check
                 try {
-                    $disk = $this->client->query(new Query('/disk/print'))->read();
+                    $disk = $this->client->query(new Query('/store/disk/print'))->read();
                 } catch (Exception $e) {
                     $disk = [];
                 }
+
+                if (empty($disk)) {
+                    try {
+                        $disk = $this->client->query(new Query('/disk/print'))->read();
+                    } catch (Exception $e) {
+                        $disk = [];
+                    }
+                }
+
+                return [
+                    'identity' => $identity[0]['name'] ?? 'Unknown',
+                    'version' => $resource[0]['version'] ?? 'Unknown',
+                    'platform' => $resource[0]['platform'] ?? 'Unknown',
+                    'board_name' => $resource[0]['board-name'] ?? ($routerboard[0]['model'] ?? 'Unknown'),
+                    'uptime' => $resource[0]['uptime'] ?? 'Unknown',
+                    'cpu_load' => $resource[0]['cpu-load'] ?? 0,
+                    'free_memory' => $resource[0]['free-memory'] ?? 0,
+                    'total_memory' => $resource[0]['total-memory'] ?? 0,
+                    'free_hdd' => $resource[0]['free-hdd-space'] ?? 0,
+                    'total_hdd' => $resource[0]['total-hdd-space'] ?? 0,
+                ];
+
+            } catch (Exception $e) {
+                Log::error("Failed to get info from NAS {$nas->shortname}: " . $e->getMessage());
+                return null;
             }
-
-            return [
-                'identity' => $identity[0]['name'] ?? 'Unknown',
-                'version' => $resource[0]['version'] ?? 'Unknown',
-                'platform' => $resource[0]['platform'] ?? 'Unknown',
-                'board_name' => $resource[0]['board-name'] ?? ($routerboard[0]['model'] ?? 'Unknown'),
-                'uptime' => $resource[0]['uptime'] ?? 'Unknown',
-                'cpu_load' => $resource[0]['cpu-load'] ?? 0,
-                'free_memory' => $resource[0]['free-memory'] ?? 0,
-                'total_memory' => $resource[0]['total-memory'] ?? 0,
-                'free_hdd' => $resource[0]['free-hdd-space'] ?? 0,
-                'total_hdd' => $resource[0]['total-hdd-space'] ?? 0,
-            ];
-
-        } catch (Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to get info from NAS {$nas->shortname}: " . $e->getMessage());
-            return null;
-        }
+        });
     }
     /**
      * Get list of servers (PPPoE, Hotspot, DHCP) from NAS.
@@ -243,50 +245,62 @@ class MikrotikService
      */
     public function getServerList(\App\Models\Nas $nas): array
     {
-        try {
-            $this->connect($nas->ip_address, $nas->username, $nas->password, $nas->api_port);
+        $cacheKey = "nas_servers_{$nas->id}";
 
-            $servers = [];
+        return Cache::remember($cacheKey, now()->addMinutes(15), function () use ($nas) {
+            try {
+                $this->connect($nas->ip_address, $nas->username, $nas->password, $nas->api_port);
 
-            // PPPoE Servers
-            $pppoe = $this->client->query(new Query('/interface/pppoe-server/server/print'))->read();
-            foreach ($pppoe as $item) {
-                $servers[] = [
-                    'type' => 'pppoe',
-                    'name' => $item['service-name'] ?? $item['name'] ?? 'Unknown', // Mikrotik PPPoE server uses service-name mostly
-                    'interface' => $item['interface'] ?? '-',
-                    'profile' => $item['default-profile'] ?? '-',
-                ];
+                $servers = [];
+
+                // PPPoE Servers
+                $pppoe = $this->client->query(new Query('/interface/pppoe-server/server/print'))->read();
+                foreach ($pppoe as $item) {
+                    $servers[] = [
+                        'type' => 'pppoe',
+                        'name' => $item['service-name'] ?? $item['name'] ?? 'Unknown',
+                        'interface' => $item['interface'] ?? '-',
+                        'profile' => $item['default-profile'] ?? '-',
+                    ];
+                }
+
+                // Hotspot Servers (Profile)
+                $hotspot = $this->client->query(new Query('/ip/hotspot/print'))->read();
+                foreach ($hotspot as $item) {
+                    $servers[] = [
+                        'type' => 'hotspot',
+                        'name' => $item['name'] ?? 'Unknown',
+                        'interface' => $item['interface'] ?? '-',
+                        'profile' => $item['profile'] ?? '-',
+                    ];
+                }
+
+                // DHCP Servers
+                $dhcp = $this->client->query(new Query('/ip/dhcp-server/print'))->read();
+                foreach ($dhcp as $item) {
+                    $servers[] = [
+                        'type' => 'dhcp',
+                        'name' => $item['name'] ?? 'Unknown',
+                        'interface' => $item['interface'] ?? '-',
+                        'profile' => '-',
+                    ];
+                }
+
+                return $servers;
+
+            } catch (Exception $e) {
+                Log::error("Failed to get server list from NAS {$nas->shortname}: " . $e->getMessage());
+                return [];
             }
+        });
+    }
 
-            // Hotspot Servers (Profile)
-            // Hotspot server configuration usually links to a profile.
-            $hotspot = $this->client->query(new Query('/ip/hotspot/print'))->read();
-            foreach ($hotspot as $item) {
-                $servers[] = [
-                    'type' => 'hotspot',
-                    'name' => $item['name'] ?? 'Unknown',
-                    'interface' => $item['interface'] ?? '-',
-                    'profile' => $item['profile'] ?? '-',
-                ];
-            }
-
-            // DHCP Servers
-            $dhcp = $this->client->query(new Query('/ip/dhcp-server/print'))->read();
-            foreach ($dhcp as $item) {
-                $servers[] = [
-                    'type' => 'dhcp',
-                    'name' => $item['name'] ?? 'Unknown',
-                    'interface' => $item['interface'] ?? '-',
-                    'profile' => '-', // DHCP doesn't have "profile" in the same sense, maybe lease-script or something else
-                ];
-            }
-
-            return $servers;
-
-        } catch (Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to get server list from NAS {$nas->shortname}: " . $e->getMessage());
-            return [];
-        }
+    /**
+     * Clear cached NAS info.
+     */
+    public function clearNasCache(int $nasId): void
+    {
+        Cache::forget("nas_info_{$nasId}");
+        Cache::forget("nas_servers_{$nasId}");
     }
 }

@@ -26,11 +26,15 @@ RUN npm run build
 FROM php:8.3-fpm-alpine
 
 RUN apk add --no-cache nginx supervisor bash curl git unzip icu-dev oniguruma-dev libzip-dev tzdata \
+    && cp /usr/share/zoneinfo/Asia/Jakarta /etc/localtime \
+    && echo "Asia/Jakarta" > /etc/timezone \
     && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS linux-headers \
     && pecl install redis \
     && docker-php-ext-enable redis \
     && docker-php-ext-install pdo pdo_mysql mbstring intl zip opcache \
     && apk del .build-deps
+
+ENV TZ=Asia/Jakarta
 
 WORKDIR /var/www/html
 COPY . .

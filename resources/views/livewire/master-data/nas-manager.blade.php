@@ -38,7 +38,7 @@
                         </div>
                     </div>
                     <div class="flex-shrink-0">
-                        <button @click="showFormModal = true; $wire.openModal()"
+                        <button wire:click="openModal"
                             class="inline-flex items-center px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-widest rounded-xl shadow-lg hover:shadow-indigo-500/40 transition-all duration-300 gap-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -76,7 +76,7 @@
                                 <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-700/50 transition-colors group">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center gap-4 cursor-pointer"
-                                            @click="showDetailModal = true; $wire.showNasDetails({{ $nas->id }})">
+                                            wire:click="showNasDetails({{ $nas->id }})">
                                             <div class="relative">
                                                 <div
                                                     class="h-10 w-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-105 transition-transform duration-300">
@@ -190,7 +190,7 @@
                                                 </svg>
                                             </button>
                                             {{-- Detail Button --}}
-                                            <button @click="showDetailModal = true; $wire.showNasDetails({{ $nas->id }})"
+                                            <button wire:click="showNasDetails({{ $nas->id }})"
                                                 class="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-all"
                                                 title="Detail Info">
                                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -199,7 +199,7 @@
                                                 </svg>
                                             </button>
                                             {{-- Edit Button --}}
-                                            <button @click="showFormModal = true; $wire.editNas({{ $nas->id }})"
+                                            <button wire:click="editNas({{ $nas->id }})"
                                                 class="p-2 text-gray-400 hover:text-amber-500 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-all"
                                                 title="Edit">
                                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -208,7 +208,7 @@
                                                 </svg>
                                             </button>
                                             {{-- Delete Button --}}
-                                            <button @click="showDeleteModal = true; $wire.confirmDelete({{ $nas->id }})"
+                                            <button wire:click="confirmDelete({{ $nas->id }})"
                                                 class="p-2 text-gray-400 hover:text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-all"
                                                 title="Hapus">
                                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -340,7 +340,7 @@
                                     class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Radius
                                     Secret</label>
                                 <div class="relative">
-                                    <input :type="show ? 'text' : 'password'" wire:model="secret" placeholder="Secret key..."
+                                    <input :type="show ? 'text' : 'password'" wire:model="secret" placeholder="{{ $editMode ? 'Biarkan kosong jika tetap' : 'Secret key...' }}"
                                         class="block w-full pl-3 pr-10 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                                     <button type="button" @click="show = !show"
                                         class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -394,11 +394,15 @@
                         </div>
                     </div>
                     <div class="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100 dark:border-gray-700/50">
-                        <button type="submit" wire:loading.attr="disabled"
-                            class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto transition-all duration-300">
-                            {{ $editMode ? 'Simpan Perubahan' : 'Buat NAS' }}
+                        <button type="submit" wire:loading.attr="disabled" wire:target="save"
+                            class="w-full inline-flex items-center gap-2 justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg wire:loading wire:target="save" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>{{ $editMode ? 'Simpan Perubahan' : 'Buat NAS' }}</span>
                         </button>
-                        <button type="button" @click="showFormModal = false; $wire.closeModal()" wire:loading.attr="disabled"
+                        <button type="button" @click="showFormModal = false; $wire.closeModal()" wire:loading.attr="disabled" wire:target="save"
                             class="mt-3 w-full inline-flex justify-center rounded-xl border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto transition-all duration-300">
                             Batal
                         </button>
@@ -440,11 +444,15 @@
                     </div>
                 </div>
                 <div class="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100 dark:border-gray-700/50">
-                    <button wire:click="deleteNas" wire:loading.attr="disabled"
-                        class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-xs font-bold uppercase tracking-wider text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto transition-all duration-300">
-                        Hapus Data
+                    <button wire:click="deleteNas" wire:loading.attr="disabled" wire:target="deleteNas"
+                        class="w-full inline-flex items-center gap-2 justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-xs font-bold uppercase tracking-wider text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg wire:loading wire:target="deleteNas" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Hapus Data</span>
                     </button>
-                    <button @click="showDeleteModal = false; $wire.closeDeleteModal()" wire:loading.attr="disabled"
+                    <button @click="showDeleteModal = false; $wire.closeDeleteModal()" wire:loading.attr="disabled" wire:target="deleteNas"
                         class="mt-3 w-full inline-flex justify-center rounded-xl border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto transition-all duration-300">
                         Batal
                     </button>
@@ -592,8 +600,13 @@
                                             Delete Selected
                                         </button>
                                         <button wire:click="syncServers({{ $nasDetailId }})"
-                                            class="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-indigo-100 transition">
-                                            Scan Services
+                                            wire:loading.attr="disabled" wire:target="syncServers"
+                                            class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-indigo-100 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <svg wire:loading wire:target="syncServers" class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span>Scan Services</span>
                                         </button>
                                     </div>
                                 </div>
@@ -688,11 +701,15 @@
                     </div>
                 </div>
                 <div class="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100 dark:border-gray-700/50">
-                    <button wire:click="deleteSelectedServers" wire:loading.attr="disabled"
-                        class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-xs font-bold uppercase tracking-wider text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto transition-all duration-300">
-                        Delete Servers
+                    <button wire:click="deleteSelectedServers" wire:loading.attr="disabled" wire:target="deleteSelectedServers"
+                        class="w-full inline-flex items-center gap-2 justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-xs font-bold uppercase tracking-wider text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg wire:loading wire:target="deleteSelectedServers" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Delete Servers</span>
                     </button>
-                    <button @click="showBulkDeleteServerModal = false; $wire.closeBulkDeleteServerModal()" wire:loading.attr="disabled"
+                    <button @click="showBulkDeleteServerModal = false; $wire.closeBulkDeleteServerModal()" wire:loading.attr="disabled" wire:target="deleteSelectedServers"
                         class="mt-3 w-full inline-flex justify-center rounded-xl border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto transition-all duration-300">
                         Cancel
                     </button>

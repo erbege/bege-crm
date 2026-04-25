@@ -10,10 +10,12 @@ use Illuminate\Support\Facades\Log;
 class NasObserver
 {
     protected $radiusSyncService;
+    protected $mikrotikService;
 
-    public function __construct(RadiusSyncService $radiusSyncService)
+    public function __construct(RadiusSyncService $radiusSyncService, \App\Services\MikrotikService $mikrotikService)
     {
         $this->radiusSyncService = $radiusSyncService;
+        $this->mikrotikService = $mikrotikService;
     }
 
     /**
@@ -44,6 +46,7 @@ class NasObserver
 
         try {
             $this->radiusSyncService->syncNas($nas);
+            $this->mikrotikService->clearNasCache($nas->id);
         } catch (DecryptException $e) {
             Log::warning("NasObserver::updated - DecryptException saat sync NAS {$nas->shortname}: {$e->getMessage()}");
         }

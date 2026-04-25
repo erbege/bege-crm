@@ -70,30 +70,12 @@ class NasManager extends Component
      * prevent NasObserver from triggering (which could cause
      * DecryptException when accessing encrypted fields).
      */
-    public function refreshConnectionStatuses(MikrotikService $mikrotikService)
+    public function refreshConnectionStatuses()
     {
-        $nasList = Nas::where('is_active', true)->get();
-
-        foreach ($nasList as $nas) {
-            try {
-                $isOnline = $mikrotikService->checkConnection($nas);
-                // Update without triggering Observer (avoids DecryptException on secret access)
-                Nas::withoutEvents(function () use ($nas, $isOnline) {
-                    $nas->update([
-                        'is_online' => $isOnline,
-                        'last_check' => now(),
-                    ]);
-                });
-            } catch (\Exception $e) {
-                // If check fails entirely, mark as offline silently
-                Nas::withoutEvents(function () use ($nas) {
-                    $nas->update([
-                        'is_online' => false,
-                        'last_check' => now(),
-                    ]);
-                });
-            }
-        }
+        // We do nothing here. The UI will just re-render and pick up 
+        // the latest 'is_online' status from the database, which is 
+        // updated by the background 'nas:check-status' command or manual checks.
+        // This prevents the page from feeling 'heavy' due to sync network calls.
     }
 
     /**

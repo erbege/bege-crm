@@ -49,6 +49,8 @@ class SettingsManager extends Component
     public $late_fee_percentage = 0;
     public $proration_enabled = false;
     public $proration_threshold_days = 15;
+    public $auto_send_invoice = false;
+    public $send_payment_reminders = false;
 
     // Payment Gateway Settings
     public $tripay_enabled = false;
@@ -108,6 +110,8 @@ class SettingsManager extends Component
         $this->late_fee_percentage = $getSetting('billing.late_fee_percentage', 0);
         $this->proration_enabled = $getSetting('billing.proration_enabled', false);
         $this->proration_threshold_days = $getSetting('billing.proration_threshold_days', 15);
+        $this->auto_send_invoice = (bool) $getSetting('billing.auto_send_invoice', false);
+        $this->send_payment_reminders = (bool) $getSetting('billing.send_payment_reminders', false);
 
         // Payment Gateways
         $this->tripay_enabled = (bool) $getSetting('payment.tripay_enabled', false);
@@ -281,6 +285,12 @@ class SettingsManager extends Component
                 'description' => 'Template pesan tagihan bulanan pelanggan',
                 'content' => "Pelanggan yang terhormat,\nBerikut kami sampaikan tagihan anda bulan ini :\n\nInvoice : {invoice}\nPelanggan : {nama_pelanggan}\nNo.Layanan : {nolayanan}\nProfil Internet : {profile}\n\nTotal Tagihan : *{total}*\n*Pembayaran paling lambat : {jatuh_tempo}*\n\nSilahkan klik link di bawah ini untuk melihat rincian invoice dan pembayaran :\n{link_invoice}\n\nJika anda mengalami kesulitan dalam melakukan pembayaran silahkan hubungi kami kembali.\nTerima kasih",
                 'variables' => ['invoice', 'nama_pelanggan', 'nolayanan', 'profile', 'jatuh_tempo', 'total', 'link_invoice']
+            ],
+            [
+                'name' => 'PENGINGAT_3_HARI',
+                'description' => 'Template pesan pengingat 3 hari sebelum jatuh tempo',
+                'content' => "Pelanggan yang terhormat,\nKami mengingatkan bahwa tagihan internet anda akan jatuh tempo dalam *3 hari* lagi :\n\nInvoice : {invoice}\nPelanggan : {nama_pelanggan}\nTotal Tagihan : *{total}*\n*Jatuh Tempo : {jatuh_tempo}*\n\nSilahkan klik link di bawah ini untuk melihat rincian invoice dan pembayaran :\n{link_invoice}\n\nTerima kasih",
+                'variables' => ['invoice', 'nama_pelanggan', 'total', 'jatuh_tempo', 'link_invoice']
             ],
             [
                 'name' => 'ISOLIR',
@@ -464,6 +474,8 @@ class SettingsManager extends Component
         Setting::set('billing.late_fee_percentage', $this->late_fee_percentage);
         Setting::set('billing.proration_enabled', (bool) $this->proration_enabled);
         Setting::set('billing.proration_threshold_days', $this->proration_threshold_days);
+        Setting::set('billing.auto_send_invoice', (bool) $this->auto_send_invoice);
+        Setting::set('billing.send_payment_reminders', (bool) $this->send_payment_reminders);
 
         $this->dispatch('toast', type: 'success', message: 'Pengaturan billing berhasil disimpan.');
     }

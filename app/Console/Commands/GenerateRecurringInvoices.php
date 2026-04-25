@@ -117,7 +117,7 @@ class GenerateRecurringInvoices extends Command
                     'device_sn' => $subscription->device_sn,
                 ]);
 
-                Invoice::create([
+                $invoice = Invoice::create([
                     'invoice_number' => Invoice::generateInvoiceNumber(),
                     'subscription_id' => $newSubscription->id,
                     'customer_id' => $newSubscription->customer_id,
@@ -131,7 +131,12 @@ class GenerateRecurringInvoices extends Command
                     'status' => 'unpaid',
                 ]);
 
-                $this->info("    ✓ Created subscription and invoice");
+                $this->info("    ✓ Created subscription and invoice {$invoice->invoice_number}");
+
+                // Auto-send WhatsApp notification if enabled
+                if (\App\Models\Setting::get('billing.auto_send_invoice', false)) {
+                    $this->sendWhatsAppNotification($invoice);
+                }
             }
 
             $processed++;
@@ -149,4 +154,42 @@ class GenerateRecurringInvoices extends Command
 
         return Command::SUCCESS;
     }
+
+    /**
+     * Send WhatsApp notification for the invoice.
+     */
+    protected function sendWhatsAppNotification(Invoice $invoice): void
+    {
+        $customer = $invoice->customer;
+        if (!$customer || !$customer->phone) {
+            return;
+        }
+
+        $phone = preg_replace('/[^0-9]/', '', $customer->phone);
+        if (substr($phone, 0, 1) === '0') {
+            $phone = '62' . substr($phone, 1);
+        }
+
+        $waMessage = \App\Models\WhatsappMessage::create([
+            'target' => $phone,
+            'template_name' => 'PENAGIHAN',
+            'template_data' => [
+                'invoice' => $invoice->invoice_number,
+                'nama_pelanggan' => $customer->name,
+                'nolayanan' => $customer->customer_id ?? ($invoice->subscription_id ?? '-'),
+                'profile' => optional(optional($invoice->subscription)->package)->name ?? '-',
+                'jatuh_tempo' => $invoice->due_date->format('d/m/Y'),
+                'total' => $invoice->formatted_total,
+                'link_invoice' => url('/'),
+            ],
+            'status' => 'pending',
+            'provider' => \App\Models\Setting::get('whatsapp.provider', 'fonnte'),
+        ]);
+
+        \App\Jobs\SendWhatsappNotificationJob::dispatch($waMessage);
+        
+        $invoice->update(['sent_at' => now()]);
+        $this->line("    → WhatsApp notification queued for {$customer->name}");
+    }
+}
 }

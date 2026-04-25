@@ -1,0 +1,62 @@
+services:
+  app:
+    image: ghcr.io/erbege/bege-crm:latest
+    container_name: crm-${CLIENT_CODE}
+    restart: unless-stopped
+    env_file: .env
+    depends_on: [db, redis]
+    ports:
+      - "127.0.0.1:8080:80"
+    networks: [crm_net]
+
+  db:
+    image: mariadb:10.11
+    container_name: db-${CLIENT_CODE}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes: [db_data:/var/lib/mysql]
+    networks: [crm_net]
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-${CLIENT_CODE}
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes: [redis_data:/data]
+    networks: [crm_net]
+
+  radiusdb:
+    image: mariadb:10.11
+    container_name: radiusdb-${CLIENT_CODE}
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${RADIUS_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${RADIUS_DB_DATABASE}
+      MYSQL_USER: ${RADIUS_DB_USERNAME}
+      MYSQL_PASSWORD: ${RADIUS_DB_PASSWORD}
+    volumes: [radius_db_data:/var/lib/mysql]
+    networks: [crm_net]
+
+  radius:
+    image: freeradius/freeradius-server:latest
+    container_name: radius-${CLIENT_CODE}
+    restart: unless-stopped
+    depends_on: [radiusdb]
+    ports:
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+    volumes:
+      - ./freeradius:/etc/freeradius
+    networks: [crm_net]
+
+networks:
+  crm_net:
+
+volumes:
+  db_data:
+  redis_data:
+  radius_db_data:

@@ -280,10 +280,36 @@
                                 <input type="number" wire:model="proration_threshold_days" min="0" max="30"
                                     class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                    Prorata berlaku jika sisa hari <b>kurang dari atau sama dengan</b> batas ini. <br>
-                                    Contoh: 15. Jika sisa hari 10 hari (<= 15) -> Prorata. Jika sisa hari 20 hari (> 15) ->
-                                        Harga Penuh.
+                                    Prorata berlaku jika sisa hari <b>kurang dari atau sama dengan</b> batas ini.
                                 </p>
+                            </div>
+                            <div class="md:col-span-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                <h4 class="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                    Otomatisasi Penagihan
+                                </h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" wire:model="auto_send_invoice" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-3 text-sm">
+                                            <label class="font-medium text-gray-700 dark:text-gray-300">Kirim Invoice Otomatis</label>
+                                            <p class="text-gray-500 dark:text-gray-400 text-xs">Langsung kirim pesan WhatsApp saat invoice rutin diterbitkan setiap bulan.</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start">
+                                        <div class="flex items-center h-5">
+                                            <input type="checkbox" wire:model="send_payment_reminders" class="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                                        </div>
+                                        <div class="ml-3 text-sm">
+                                            <label class="font-medium text-gray-700 dark:text-gray-300">Pengingat Pembayaran</label>
+                                            <p class="text-gray-500 dark:text-gray-400 text-xs">Kirim pengingat otomatis 3 hari sebelum dan tepat pada hari jatuh tempo.</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="flex justify-end">
