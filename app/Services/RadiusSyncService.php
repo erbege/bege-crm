@@ -525,109 +525,83 @@ class RadiusSyncService
 
         if (!$this->ensureRadiusAvailable('bulk sync vouchers')) {
             return;
-        }
+            $usernames = array_column($vouchersData, 'code');
 
-        try {
-            DB::connection('radius')->beginTransaction();
+            // 1. Bulk Delete in chunks to avoid SQL placeholder limits
+            foreach (array_chunk($usernames, 500) as $chunk) {
+                RadCheck::whereIn('username', $chunk)->delete();
+                RadUserGroup::whereIn('username', $chunk)->delete();
+                RadReply::whereIn('username', $chunk)->delete();
+            }
 
+            $radCheckInserts = [];
+            $radUserGroupInserts = [];
+
+            // 2. Prepare Data Arrays
             foreach ($vouchersData as $voucher) {
-                // Pre-cleanup before sync to handle retries/duplicates
-                RadCheck::where('username', $voucher['code'])->delete();
-                RadUserGroup::where('username', $voucher['code'])->delete();
-                RadReply::where('username', $voucher['code'])->delete();
-
                 // RadCheck: Password
-                RadCheck::create([
+                $radCheckInserts[] = [
                     'username' => $voucher['code'],
                     'attribute' => 'Cleartext-Password',
                     'op' => ':=',
                     'value' => $voucher['password'],
-                ]);
+                ];
 
-                // 1.1 RadCheck: Service-Type for Hotspot
-                RadCheck::create([
+                // RadCheck: Service-Type
+                $radCheckInserts[] = [
                     'username' => $voucher['code'],
                     'attribute' => 'Service-Type',
                     'op' => ':=',
                     'value' => 'Login-User',
-                ]);
+                ];
 
                 // RadUserGroup: Profile
-                // Use mikrotik_group if available, otherwise profile_name
                 $groupName = $voucher['mikrotik_group'] ?? ($voucher['profile_name'] ?? null);
-
                 if ($groupName) {
-                    RadUserGroup::create([
+                    $radUserGroupInserts[] = [
                         'username' => $voucher['code'],
                         'groupname' => $groupName,
                         'priority' => 1,
-                    ]);
+                    ];
                 }
 
                 // NAS Restriction
                 if (!empty($voucher['nas_shortname'])) {
-                    RadCheck::create([
+                    $radCheckInserts[] = [
                         'username' => $voucher['code'],
                         'attribute' => 'NAS-Identifier',
                         'op' => '==',
                         'value' => $voucher['nas_shortname'],
-                    ]);
+                    ];
                 }
 
-                // Data Limit Override (Max-All-Octets)
+                // Data Limit Override
                 if (isset($voucher['data_limit']) && $voucher['data_limit'] > 0) {
-                    RadCheck::create([
+                    $radCheckInserts[] = [
                         'username' => $voucher['code'],
                         'attribute' => 'Max-All-Octets',
                         'op' => ':=',
                         'value' => (string) $voucher['data_limit'],
-                    ]);
+                    ];
                 }
 
-                // Time Limit Override (Session-Timeout)
-                // Note: time_limit here comes from generator input (minutes/hours converted to seconds or raw?)
-                // Generator stores it as raw int usually. Let's check Generator.php
-                // Generator: 'time_limit' => $this->time_limit. Code doesn't convert to seconds yet!
-                // Wait, Generator.php L136 just assigns $this->time_limit. 
-                // Using "time_limit" in generator usually implies minutes or hours? 
-                // User said "jika time limit diisi > 0". 
-                // Let's assume input is in Minutes (standard) or we need to check if there is a unit.
-                // Looking at Generator.php, there is NO `time_unit` input manifest in validatrules, only `data_unit`.
-                // However, standard hotspot often uses Minutes or Hours.
-                // Reference: Profile has `time_limit_unit`. Generator seems to lack unit?
-                // Let's re-read Generator source. L26 `public $time_limit;`. L28 `public $data_unit`.
-                // There is NO `time_unit` in Generator properties!
-                // Assuming "Time Limit" in generator is likely Minutes or same logic as Profile?
-                // Actually, looking at previous steps or context, usually it is Minutes.
-                // Let's assume it is MINUTES if no unit is provided, or strictly Seconds?
-                // Most radius implementations use Seconds.
-                // If I look at `HotspotProfile` usage, it converts based on unit.
-                // If Generator has no unit, I should probably assume MINUTES or HOURS.
-                // Let's assume MINUTES for now as it's a safe middle ground, OR it might be Seconds.
-                // BUT, wait, `data_limit` calculates bytes in Generator L100.
-                // `time_limit` is NOT calculated in Generator.
-                // If user enters "60", is it 1 hour? likely.
-                // So I should convert to seconds here? 
-                // Or maybe I should check if I missed `time_unit` in Generator.
-                // Let's check `voucher-generator.blade.php` to see the input label/select.
-
-                // PENDING_VERIFICATION: I'll convert to string first, but I suspect I might need to multiply by 60.
-                // For now, I will explicitly cast to string. 
-                // If the user meant "Seconds", then just raw. 
-                // If "Minutes", I need * 60.
-                // Most simple hotspot systems use Minutes.
-                // Let's assume RAW for now, but I will check the view in next step if possible.
-                // For now, implementing as is (Value directly).
-
-                // Time Limit Override (Max-All-Session-Time)
+                // Time Limit Override
                 if (isset($voucher['time_limit']) && $voucher['time_limit'] > 0) {
-                    RadCheck::create([
+                    $radCheckInserts[] = [
                         'username' => $voucher['code'],
                         'attribute' => 'Max-All-Session-Time',
                         'op' => ':=',
                         'value' => (string) $voucher['time_limit'],
-                    ]);
+                    ];
                 }
+            }
+
+            // 3. Bulk Insert in Chunks
+            foreach (array_chunk($radCheckInserts, 500) as $chunk) {
+                RadCheck::insert($chunk);
+            }
+            foreach (array_chunk($radUserGroupInserts, 500) as $chunk) {
+                RadUserGroup::insert($chunk);
             }
 
             DB::connection('radius')->commit();
