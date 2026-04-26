@@ -124,4 +124,4 @@ Kontribusi selalu terbuka! Silakan lakukan *fork* dan kirimkan *pull request* un
 Proyek ini dilisensikan di bawah [MIT License](LICENSE).
 
 ---
-Built with ❤️ by **[Your Name/Company]**
+Built with ❤️ by **CodeCrafter Studio**
